@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ru">
+ <head>
+    <meta charset="utf-8">
+    <title>Main</title>
+    <meta name="viewport" content="minimum-scale=1.0, width=device-width, maximum-scale=1.0, user-scalable=no">
+    <style type="text/css">
+    html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x:hidden;
+}
+
+body{
+    background-color: #2e2e2e;
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
+li {
+    list-style-type: none;
+}
+
+ul {
+    padding: 0;
+}
+
+#log {
+    display: block;
+    margin: 0px;
+    padding: 10px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-family: Arial;
+    background-color: #313131;
+}
+
+#coords {
+    display: block;
+    margin: 0px auto;
+    padding: 3px;
+    font-family: Arial;
+    font-size: small;
+    color: white;
+    background: #222121;
+}
+
+#screen {
+    display: block;
+    margin: 20px auto;
+    background: black/*#eee*/;
+    border: #eee;
+}
+
+#info {
+    display: block;
+    margin: 0 auto;
+    padding: 10px;
+    font-family: Arial;
+    color: white;
+    background: #222121;
+    width: 640px;
+    border:1px solid black;
+    border-width: 1px;
+    border-radius: 10px;
+}
+
+.divide {
+    background-color: #2e2e2e;
+    margin: 0;
+}
+
+/*joystick*/
+
+#joyStick {
+    margin: 0 auto;
+    margin-bottom: 20px;
+    width:200px; 
+    height:200px; 
+    background:#222121; 
+    border:1px solid black;
+    border-radius: 10px;
+    border-width: 1px;
+    position:relative;
+}
+
+#joyManipulator {
+    width:40px;
+    height:40px;
+    position:absolute;
+    border-radius:10px;
+    background:rgb(206, 206, 206);
+    cursor:pointer;
+}
+
+#panel {
+    margin: 20px auto;
+    width: 200px;
+    background-color: #222121;
+    border:1px solid black;
+    border-radius: 10px;
+    border-width: 1px;
+}
+
+#xCoord, #yCoord {
+    font-family: Arial;
+    color: white;
+    
+}
+
+    </style>
+ </head>
+
+ <body onmousemove="mouseCoords(event)">
+      
+    <h3 id = "log"><a href="">Control Panel</a></h3>
+    <div id="coords">&nbsp;</div>
+    <img id="screen" width="640" height="480" src="">
+
+    <div id="joyStick">
+        <div id="joyManipulator"></div>
+      </div>
+    
+      <div id = "panel">
+        <center>
+        <p>
+        <p id="xCoord"></p>
+        <p id="yCoord"></p>
+        </center>
+      </div>
+
+    <div id = "info">
+        <center><h3>Управление:</h3></center>
+        <ul>
+            <li class = "divide">Передвижение</li>
+            <li>W - вперед</li>
+            <li>A - налево</li>
+            <li>S - назад</li> 
+            <li>D - направо</li>
+            <li>[SPACE] - стоп</li>
+            <li>X - захват</li>
+            <p>
+            <li class = "divide">Манипулятор</li>
+            <li>[MOUSE] - лево-право</li>
+            <li>[MOUSE] - верх-низ</li>
+        </ul> 
+    </div>
+ <script>
+console.log("run script.js");
+
+//создание WebSocket
+let ws = new WebSocket("ws://192.168.1.73:8001");
+let image = document.getElementById('screen');
+
+//реакция WebSocket на поступающие изображения
+ ws.onmessage = m => {
+    image.src = URL.createObjectURL(m.data);
+}
+
+//посылаем серверу значения с клавиатуры
+document.onkeypress = function(event) {
+    console.log(event.key);
+    ws.send(event.key);
+}
+
+//координаты курсора (web-страница)
+function mouseCoords(event) {
+    // Для браузера IE
+    if (document.all)  { 
+      x = event.x + document.body.scrollLeft; 
+      y = event.y + document.body.scrollTop; 
+    // Для остальных браузеров
+    } else {
+      x = event.pageX; // Координата X курсора
+      y = event.pageY; // Координата Y курсора
+    }
+    document.getElementById("coords").innerHTML = "X : " + x + ", Y : " + y;
+    /*ws.send(event.x);
+    ws.send(event.y);*/
+   }
+
+
+///////////     Joystick    ///////////
+var area = $("#joyStick");
+var width = area.width();
+var height = area.height();
+
+var manipulator = $("#joyManipulator");
+var maniW = manipulator.width();
+var maniH = manipulator.height();
+
+init();
+makeDraggable();
+
+function init() {
+    $("#joyManipulator").css({
+        top: height / 2 - maniH / 2,
+        left: width / 2 - maniW / 2
+    });
+}
+
+function makeDraggable(){
+    $("#joyManipulator").draggable({
+        grid: [width / 200, height/ 200],
+        containment: "parent",
+        revert: true,
+        drag: function (e, ui) {
+          var offset = $(this).offset();
+          var parentOffset = $(this).parent().offset();
+          var x = parentOffset.left - offset.left;
+          var y = parentOffset.top - offset.top;
+          x = (x / (width - 100)) * -2 - 1;
+          y = (y / (height - 100)) * 2 + 1;
+          x = x.toFixed(2);
+          y = y.toFixed(2);
+          $("#xCoord").text("x: " + x);
+          console.log("xArm:" + x);
+          $("#yCoord").text("y: " + y);
+          console.log("yArm:" + y);
+        },
+        stop: function () {
+          $("#xCoord").text("x: 0");
+          $("#yCoord").text("y: 0");
+        }
+      });
+
+
+}
+
+ </script>
+ </body> 
+</html>
